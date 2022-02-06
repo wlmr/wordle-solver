@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Lib
+      Words
   other-modules:
       Paths_wordle_solver
   hs-source-dirs:
