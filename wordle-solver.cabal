@@ -25,7 +25,8 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Game
+      Solver
       Words
   other-modules:
       Paths_wordle_solver

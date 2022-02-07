@@ -1,7 +1,11 @@
-module Lib
+module Solver
   ( getBestGuess,
     readHint,
-    Hint,
+    Hint(..),
+    Guess,
+    showHint,
+    guessToHint,
+    correctReply
   )
 where
 
@@ -13,19 +17,39 @@ alphabet :: [Char]
 alphabet = ['a' .. 'z']
 
 type Index = Int
+type Guess = (Char, Index)
+data Hint = Green Char Index | Yellow Char Index | Red Char deriving (Show)
 
-data Hint = Green Index Char | Yellow Index Char | Red Char deriving (Show)
+guessToHint :: String -> Guess -> Hint
+guessToHint answer (c,i)
+  | c `notElem` answer = Red c
+  | i `elem` elemIndices c answer = Green c i
+  | otherwise = Yellow c i
 
 readHint :: (String, Index) -> Maybe Hint
-readHint ('G' : xs, pos) = Just (Green pos (head xs))
-readHint ('Y' : xs, pos) = Just (Yellow pos (head xs))
-readHint ('R' : xs, pos) = Just (Red (head xs))
+readHint ('G' : xs, pos) = Just (Green  (head xs) pos) 
+readHint ('Y' : xs, pos) = Just (Yellow (head xs) pos) 
+readHint ([x]     , pos) = Just (Red x)
 readHint _ = Nothing
 
+showHint :: Hint -> String
+showHint (Green  c i) = 'G':[c]
+showHint (Yellow c i) = 'Y':[c]
+showHint (Red    c)   =     [c]
+
+correctGuess :: Hint -> Bool
+correctGuess (Green _ _) = True
+correctGuess _           = False
+
+correctReply :: [Hint] -> Bool
+correctReply = all correctGuess
+  
+
 hintPredicate :: Hint -> (String -> Bool)
-hintPredicate (Green i c) = elem i . elemIndices c
-hintPredicate (Yellow i c) = notElem i . elemIndices c
+hintPredicate (Green c i) = elem i . elemIndices c
+hintPredicate (Yellow c i) = (\indices -> not (null indices) && (i `notElem` indices)) . elemIndices c
 hintPredicate (Red c) = notElem c
+
 
 filterWordList :: [Hint] -> [String] -> [String]
 filterWordList hints = filter (\w -> all ((== True) . ($w)) filters)

@@ -2,7 +2,7 @@ module Main where
 
 import Control.Monad
 import Data.Maybe (fromJust)
-import Lib (getBestGuess, readHint)
+import Solver (getBestGuess, readHint)
 import System.Environment (getArgs)
 import System.IO
 
