@@ -7,13 +7,14 @@ module Solver
     guessToHint,
     correctReply,
     entropy,
-    filterWordList
+    filterWordList,
+    stringToHints
   )
 where
 
 import Control.Applicative
 import Data.List (elemIndices, sortBy, sortOn)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe, isNothing)
 import Words
 import qualified Data.Ord
 
@@ -29,6 +30,18 @@ guessToHint answer (c,i)
   | c `notElem` answer = Red c
   | i `elem` elemIndices c answer = Green c i
   | otherwise = Yellow c i
+
+stringToHints :: String -> [Hint]
+stringToHints inp = if any isNothing maybes then [] else map fromJust maybes
+  where maybes = zipWith (curry readHint) stringHints indices
+        stringHints = words inp
+        indices = [0 .. length stringHints - 1]
+
+goodInput :: [Maybe a] -> [a]
+goodInput [] = []
+goodInput (x:xs) = case x of
+  Just a -> a : goodInput xs 
+  Nothing -> goodInput xs
 
 readHint :: (String, Index) -> Maybe Hint
 readHint ('G' : xs, pos) = Just (Green  (head xs) pos) 

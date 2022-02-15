@@ -2,7 +2,7 @@ module Main where
 
 import Control.Monad
 import Data.Maybe (fromJust)
-import Solver (getBestGuesses, readHint, filterWordList, entropy)
+import Solver (getBestGuesses, readHint, filterWordList, entropy, stringToHints, Hint)
 import System.Environment (getArgs)
 import System.IO
 import Words (answers)
@@ -19,12 +19,19 @@ main = loop answers
 -}
 loop :: [String] -> IO ()
 loop wordList = do
-  print "Try one of the following:\n" 
+  putStrLn "Try one of the following:" 
   print $ getBestGuesses 10 entropy wordList
-  hintText <- getLine
-  let
-    hintTexts = words hintText 
-    indices = [0 .. (length hintTexts - 1)]
-    hints = zipWith (curry (fromJust . readHint)) hintTexts indices
+  hints <- getInput
   loop $ filterWordList hints wordList
 
+getInput :: IO [Hint]
+getInput = do 
+  hintText <- getLine
+  let
+    hints = stringToHints hintText
+  if null hints 
+    then do
+      putStrLn $ "Couldn't parse " ++ hintText ++ ", try again"
+      getInput
+    else do
+      return hints
