@@ -21,7 +21,10 @@ loop :: [String] -> IO ()
 loop wordList = do
   print "Try one of the following:\n" 
   print $ getBestGuesses 10 entropy wordList
-  hintsText <- getLine
-  let hints = zipWith (curry (fromJust . readHint)) (words hintsText) [0 .. 4]
+  hintText <- getLine
+  let
+    hintTexts = words hintText 
+    indices = [0 .. (length hintTexts - 1)]
+    hints = zipWith (curry (fromJust . readHint)) hintTexts indices
   loop $ filterWordList hints wordList
 
