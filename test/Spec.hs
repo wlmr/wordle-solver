@@ -1,32 +1,35 @@
-import Solver 
-
-answer :: String
-answer = "elder"
+import Solver
+import Data.List (sortBy, sortOn)
+import qualified Data.Ord
+import Words (answers)
+import Solver (filterWordList)
 
 wordsFileName :: String
 wordsFileName = "words_5_better.txt"
 
+answer = "aroma"
+
 main :: IO ()
 main = do
-  contents <- readFile wordsFileName
-  let wordList = words contents
   putStrLn $ "Answer: " ++ answer
-  guessLoop 1 wordList []
-  
-guessLoop :: Int -> [String] -> [Hint] -> IO ()
-guessLoop nbrGuess wordList hints = do
-  let (suggestion, newWordList) = getBestGuess hints wordList
-      newHints = zipWith (curry (guessToHint answer)) suggestion [0 .. 4]
+  loop 1 answers 
+
+
+loop :: Int -> [String] -> IO ()
+loop nbrGuess wordList = do
+  putStr "Trying the following: " 
+  let (suggestion, score):_ = getBestGuesses 1 entropy wordList
+      hints = zipWith (curry (guessToHint answer)) suggestion [0 .. 4]
   putStrLn suggestion
-  putStrLn $ unwords $ map showHint newHints
-  if correctReply newHints 
+  if correctReply hints
     then do
       putStrLn $ "Found the answer in " ++ show nbrGuess ++ " number of guesses"
     else do
-      guessLoop (nbrGuess + 1) newWordList newHints
+      loop (nbrGuess + 1) (filterWordList hints wordList)
 
 
-notMain = putStrLn "String"
+
+
 
 {- 
 Game:

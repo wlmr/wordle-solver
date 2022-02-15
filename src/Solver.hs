@@ -1,17 +1,21 @@
 module Solver
-  ( getBestGuess,
+  ( getBestGuesses,
     readHint,
     Hint(..),
     Guess,
     showHint,
     guessToHint,
-    correctReply
+    correctReply,
+    entropy,
+    filterWordList
   )
 where
 
 import Control.Applicative
-import Data.List (elemIndices, sortBy)
+import Data.List (elemIndices, sortBy, sortOn)
 import Data.Maybe (fromJust)
+import Words
+import qualified Data.Ord
 
 alphabet :: [Char]
 alphabet = ['a' .. 'z']
@@ -37,6 +41,13 @@ showHint (Green  c i) = 'G':[c]
 showHint (Yellow c i) = 'Y':[c]
 showHint (Red    c)   =     [c]
 
+guessToRed :: (Char, b) -> Hint
+guessToRed (c,_) = Red c
+guessToGreen :: (Char, Index) -> Hint
+guessToGreen (c,i) = Green c i
+guessToYellow :: (Char, Index) -> Hint
+guessToYellow (c, i) = Yellow c i
+
 correctGuess :: Hint -> Bool
 correctGuess (Green _ _) = True
 correctGuess _           = False
@@ -44,47 +55,26 @@ correctGuess _           = False
 correctReply :: [Hint] -> Bool
 correctReply = all correctGuess
   
-
 hintPredicate :: Hint -> (String -> Bool)
 hintPredicate (Green c i) = elem i . elemIndices c
 hintPredicate (Yellow c i) = (\indices -> not (null indices) && (i `notElem` indices)) . elemIndices c
 hintPredicate (Red c) = notElem c
-
 
 filterWordList :: [Hint] -> [String] -> [String]
 filterWordList hints = filter (\w -> all ((== True) . ($w)) filters)
   where
     filters = map hintPredicate hints
 
-getBestGuess :: [Hint] -> [String] -> (String, [String])
-getBestGuess hints wordList =
-  ( fst $
-      foldl
-        ( \(bestWord, highScore) word ->
-            if wordToScore word > highScore
-              then (word, wordToScore word)
-              else (bestWord, highScore)
-        )
-        ("", 0.0)
-        uniqueLetterWordList,
-    hintFilteredWordList
-  )
-  where
-    wordToScore = foldl (\acc char -> ((+ acc) . fromJust . lookup char . letterFrequency) wordList) 0.0
-    uniqueLetterWordList = if not (any uniqueCheck hintFilteredWordList) then hintFilteredWordList else filter uniqueCheck hintFilteredWordList
-    hintFilteredWordList = filterWordList hints wordList
+getBestGuesses :: Int -> (String -> [String] -> Double) -> [String] -> [(String, Double)]
+getBestGuesses nbrOfGuesses scoreFunc wordList = (take nbrOfGuesses . sortOn (Data.Ord.Down . snd) . map (\word -> (word, scoreFunc word wordList))) wordList
 
-letterFrequency :: [String] -> [(Char, Double)]
-letterFrequency wordList = map (\(l, o) -> (l, (o / nbrWords) * 100.0)) letterOccurance
-  where
-    nbrWords = fromIntegral $ length wordList
-    letterOccurance = map (\l -> (l, foldl (\acc word -> if l `elem` word then acc + 1 else acc) 0 wordList)) alphabet
+entropy :: String -> [String] -> Double
+entropy word wordList = (negate . sum . map (\x -> p x * logBase 2 (p x)). filter (\hint -> nbrWordsFiltered hint /= 0.0)) (allHintCombos word)
+  where p x = nbrWordsFiltered x / nbrWordsTot
+        nbrWordsTot = fromIntegral $ length wordList
+        nbrWordsFiltered hint = fromIntegral $ length $ filterWordList hint wordList
 
-uniqueCheck :: String -> Bool
-uniqueCheck word = uniqueCheck' word (tail word)
-  where
-    uniqueCheck' (x : xs) (y : ys)
-      | x /= y = uniqueCheck' (x : xs) ys
-      | otherwise = False
-    uniqueCheck' (x : xs) [] = uniqueCheck' xs (tail xs)
-    uniqueCheck' [] _ = True
+allHintCombos :: String -> [[Hint]]
+allHintCombos word = foldr genCombos [[]] guesses
+  where genCombos guess combos = concatMap (\combo -> map (\toHint -> toHint guess:combo) [guessToGreen, guessToYellow, guessToRed]) combos
+        guesses = zip word [0 .. (length word - 1)]
